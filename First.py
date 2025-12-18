@@ -2,6 +2,24 @@ from tkinter import *
 from tkinter import messagebox
 import mysql.connector
 
+#--------------------database connection-------------
+
+def connect_db():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="Sometimes@123",
+        database="db_lms"
+    )
+
+def open_admin_window(mem_id):
+    import ManageBooks
+    ManageBooks.start(mem_id)
+    
+
+def open_student_window(mem_id):
+    import BorrowBooks
+    BorrowBooks.start(mem_id)
 # ------------------ Main Window ------------------
 root = Tk()
 root.title("Library Management System")
@@ -28,10 +46,52 @@ entry_password.grid(row=1, column=1, pady=10)
 
 # ------------------ Login Button Function ------------------
 def login():
-    username = entry_username.get()
-    password = entry_password.get()
-    print("Login clicked")
-    print("Username:", username)
+    username = entry_username.get().strip()
+    password = entry_password.get().strip()
+
+    # -------- Input Validation --------
+    if not username:
+        messagebox.showwarning("Input Error", "Please enter username")
+        entry_username.focus()
+        return
+
+    if not password:
+        messagebox.showwarning("Input Error", "Please enter password")
+        entry_password.focus()
+        return
+
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT mem_id, role FROM memberinfo
+        WHERE phone=%s AND password=%s
+    """
+    cursor.execute(query, (username, password))
+    result = cursor.fetchone()
+
+    if result:
+        mem_id, role = result
+        messagebox.showinfo("Success", f"Login Successful ({role})")
+
+        root.destroy()   # close login window
+
+        # -------- Role-based window --------
+        if role == "ADM":
+            print("admin login")
+            open_admin_window(mem_id)   # call your admin dashboard
+        elif role == "USR":
+            print("User login")
+            open_student_window(mem_id) # call your student dashboard
+        else:
+            messagebox.showerror("Error", "Unknown role!")
+
+    else:
+        messagebox.showerror("Error", "Invalid credentials")
+
+    cursor.close()
+    conn.close()
+
 
 # ------------------ Signup Window Function ------------------
 def open_signup():
@@ -49,6 +109,7 @@ def open_signup():
 
     entry_su_username = Entry(signup_frame, width=30)
     entry_su_username.grid(row=0, column=1, pady=10)
+    entry_su_username.insert(0, "9869986779")
 
     # -------- Signup Password --------
     lbl_su_password = Label(signup_frame, text="Password:")
