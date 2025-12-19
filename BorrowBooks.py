@@ -5,7 +5,47 @@ import mysql.connector
 mem_id_global = None
 
 #------------show borrowed books-----------
-#def show_borrowed_books(mem_id):
+def show_borrowed_books(mem_id):
+    """
+    Shows borrowed books for a member with additional info:
+    - Title
+    - Borrow Date
+    - Borrowed Days (difference between today and borrow date)
+    """
+    # Clear existing rows
+    for row in borrowed_table.get_children():
+        borrowed_table.delete(row)
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        query = """
+            SELECT 
+                t.title,
+                b.borrow_date
+            FROM borrowdetail b
+            JOIN tbl_books t ON b.isbn = t.isbn
+            WHERE b.mem_id = %s
+            ORDER BY b.borrow_date DESC
+        """
+
+        cursor.execute(query, (mem_id,))
+        records = cursor.fetchall()
+
+        today = date.today()
+
+        for row in records:
+            title, borrow_date = row
+            borrowed_days = (today - borrow_date).days  # difference in days
+            borrowed_table.insert("", END, values=(title, borrow_date, borrowed_days))
+
+    except mysql.connector.Error as err:
+        messagebox.showerror("Database Error", str(err))
+
+    finally:
+        cursor.close()
+        conn.close()
 
 #--------back to login jane code---------
 def go_back():
@@ -198,8 +238,8 @@ def init_GUI():
  borrowed_frame = Frame(root)
  borrowed_frame.pack()
 
- borrowed_columns = ("ISBN", "Title", "Author", "Borrow Date", "Return Date")
-
+ borrowed_columns = ("Book name", "Borrowed date", "Held for(days)")
+ global borrowed_table
  borrowed_table = ttk.Treeview(
     borrowed_frame,
     columns=borrowed_columns,
@@ -249,5 +289,6 @@ def init_GUI():
 
 # ---------- LOAD BOOKS AT START ----------
  load_books()
+ show_borrowed_books(mem_id_global)
  book_table.bind("<ButtonRelease-1>", on_book_select)
  root.mainloop()
