@@ -154,11 +154,26 @@ def open_signup():
             messagebox.showerror("Error", "Passwords do not match")
             return
         
+    
         conn = connect_db()
         cursor = conn.cursor()
-        query = "INSERT INTO memberinfo (isbn, title, author) VALUES (%s, %s, %s)"
-        cursor.execute(query, (isbn, title, author))
+
+        
+        print("before  insert query in signup")
+        query = """
+            INSERT INTO memberinfo (full_name, email, password)
+            VALUES (%s, %s, %s)
+        """
+        
+        print("isbn is after query ")
+        values = (su_username, email, su_password)  # return_date is NULL initially
+
+        cursor.execute(query, values)
         conn.commit()
+
+        messagebox.showinfo("Success", f"User is registered ")
+        cursor.close()
+        conn.close()
         
 
 
