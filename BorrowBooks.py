@@ -2,6 +2,24 @@ from tkinter import *
 from tkinter import messagebox
 from tkinter import ttk
 import mysql.connector
+mem_id_global = None
+
+#------------if clicked in a particular field-------------
+def on_book_select(event):
+    selected_item = book_table.selection()  # returns a tuple of selected item ids
+    if selected_item:
+        item_id = selected_item[0]  # get first selected item
+        book_data = book_table.item(item_id)  # dictionary with "values"
+        isbn, title, author = book_data["values"]
+        print("ISBN:", isbn)
+        print("Title:", title)
+        print("Author:", author)
+
+def start(mem_id):
+    global mem_id_global  # tell Python we mean the global variable
+    mem_id_global = mem_id
+    print("member ID is now", mem_id_global)
+    init_GUI()
 
 # ---------- DATABASE CONNECTION ----------
 def connect_db():
@@ -12,6 +30,55 @@ def connect_db():
         database="db_lms"
     )
 
+
+
+
+
+# ------------ Borrow Book Function ---------
+from datetime import date
+from tkinter import messagebox
+
+def borrow_book():
+    print("member ID is ",mem_id_global)
+    # Get selected row
+    selected_item = book_table.selection()  # returns tuple of selected items
+    if not selected_item:
+        messagebox.showwarning("No selection", "Please select a book to borrow")
+        return
+
+    item_id = selected_item[0]
+    book_data = book_table.item(item_id)["values"]
+    isbn = book_data[0]  # first column is ISBN
+
+    # Insert into DB
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        borrow_date = date.today()  # today's date
+        print("before  insert query")
+        query = """
+            INSERT INTO borrowdetail (mem_id, isbn, borrow_date)
+            VALUES (%s, %s, %s)
+        """
+        
+        print("isbn is after query ",isbn)
+        values = (mem_id_global, isbn, borrow_date)  # return_date is NULL initially
+
+        cursor.execute(query, values)
+        conn.commit()
+
+        messagebox.showinfo("Success", f"Book {isbn} borrowed successfully!")
+
+    except Exception as e:
+        messagebox.showerror("Database Error", str(e))
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+    
 # ---------- LOAD BOOKS INTO TABLE ----------
 def load_books():
     for row in book_table.get_children():
@@ -34,103 +101,61 @@ def load_books():
         conn.close()
 
 # ---------- ADD BOOK FUNCTION ----------
-def add_book():
-    isbn = entry_isbn.get()
-    title = entry_title.get()
-    author = entry_author.get()
 
-    if isbn == "" or title == "" or author == "":
-        messagebox.showerror("Error", "All fields are required")
-        return
-
-    try:
-        conn = connect_db()
-        cursor = conn.cursor()
-
-        query = "INSERT INTO tbl_books (isbn, title, author) VALUES (%s, %s, %s)"
-        cursor.execute(query, (isbn, title, author))
-        conn.commit()
-
-        messagebox.showinfo("Success", "Book added successfully")
-
-        entry_isbn.delete(0, END)
-        entry_title.delete(0, END)
-        entry_author.delete(0, END)
-
-        load_books()  # refresh table
-
-    except mysql.connector.Error as err:
-        messagebox.showerror("Database Error", str(err))
-
-    finally:
-        cursor.close()
-        conn.close()
-
+    
 # ---------- GUI WINDOW ----------
-root = Tk()
-root.title("Library Management System - Student portal")
-root.geometry("700x500")
-root.resizable(False, False)
+
+def init_GUI():
+ global root,book_table
+ root = Tk()
+ root.title("Library Management System - Student portal")
+ root.geometry("700x500")
+ root.resizable(False, False)
 
 # ---------- HEADING ----------
-Label(root, text="Student Dashboard", font=("Arial", 18, "bold")).pack(pady=10)
+ Label(root, text="Student Dashboard", font=("Arial", 18, "bold")).pack(pady=10)
 
 # ---------- TABLE FRAME ----------
-table_frame = Frame(root)
-table_frame.pack(pady=10)
+ global table_frame
+ table_frame = Frame(root)
+ table_frame.pack(pady=10)
+ columns = ("ISBN", "Title", "Author")
 
-columns = ("ISBN", "Title", "Author")
-
-book_table = ttk.Treeview(
-    table_frame,
+ book_table = ttk.Treeview(
+     table_frame,
     columns=columns,
     show="headings",
     height=8
 )
 # available books matra dekhauxa hola
-book_table.heading("ISBN", text="ISBN")
-book_table.heading("Title", text="Title")
-book_table.heading("Author", text="Author")
+ book_table.heading("ISBN", text="ISBN")
+ book_table.heading("Title", text="Title")
+ book_table.heading("Author", text="Author")
+ 
+ book_table.column("ISBN", width=120)
+ book_table.column("Title", width=300)
+ book_table.column("Author", width=200)
+ 
+ book_table.pack(side=LEFT)
 
-book_table.column("ISBN", width=120)
-book_table.column("Title", width=300)
-book_table.column("Author", width=200)
-
-book_table.pack(side=LEFT)
-
-scrollbar = ttk.Scrollbar(table_frame, orient=VERTICAL, command=book_table.yview)
-book_table.configure(yscroll=scrollbar.set)
-scrollbar.pack(side=RIGHT, fill=Y)
+ scrollbar = ttk.Scrollbar(table_frame, orient=VERTICAL, command=book_table.yview)
+ book_table.configure(yscroll=scrollbar.set)
+ scrollbar.pack(side=RIGHT, fill=Y)
 
 # ---------- ADD BOOK SECTION ----------
-Label(root, text="Add New Book", font=("Arial", 14, "bold")).pack(pady=10)
 
-form_frame = Frame(root)
-form_frame.pack()
 
-Label(form_frame, text="ISBN:", font=("Arial", 11)).grid(row=0, column=0, padx=10, pady=5, sticky=W)
-entry_isbn = Entry(form_frame, width=30)
-entry_isbn.grid(row=0, column=1)
-
-Label(form_frame, text="Title:", font=("Arial", 11)).grid(row=1, column=0, padx=10, pady=5, sticky=W)
-entry_title = Entry(form_frame, width=30)
-entry_title.grid(row=1, column=1)
-
-Label(form_frame, text="Author:", font=("Arial", 11)).grid(row=2, column=0, padx=10, pady=5, sticky=W)
-entry_author = Entry(form_frame, width=30)
-entry_author.grid(row=2, column=1)
-
-Button(
+ Button(
     root,
     text="Borrow Book",
     font=("Arial", 11, "bold"),
     bg="green",
     fg="white",
     width=15,
-    command=add_book
+    command=borrow_book
 ).pack(pady=15)
 
 # ---------- LOAD BOOKS AT START ----------
-load_books()
-
-root.mainloop()
+ load_books()
+ book_table.bind("<ButtonRelease-1>", on_book_select)
+ root.mainloop()

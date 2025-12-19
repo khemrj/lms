@@ -19,6 +19,7 @@ def open_admin_window(mem_id):
 
 def open_student_window(mem_id):
     import BorrowBooks
+    print("login ma memId is ",mem_id)
     BorrowBooks.start(mem_id)
 # ------------------ Main Window ------------------
 root = Tk()
@@ -36,6 +37,8 @@ lbl_username.grid(row=0, column=0, sticky="w", pady=10)
 
 entry_username = Entry(frame, width=30)
 entry_username.grid(row=0, column=1, pady=10)
+entry_username.insert(0,"9876765456")
+
 
 # ------------------ Password ------------------
 lbl_password = Label(frame, text="Password:")
@@ -43,6 +46,7 @@ lbl_password.grid(row=1, column=0, sticky="w", pady=10)
 
 entry_password = Entry(frame, width=30, show="*")
 entry_password.grid(row=1, column=1, pady=10)
+entry_password.insert(0,"Sometimes@123")
 
 # ------------------ Login Button Function ------------------
 def login():
@@ -82,6 +86,7 @@ def login():
             open_admin_window(mem_id)   # call your admin dashboard
         elif role == "USR":
             print("User login")
+            print("memberis is ", mem_id)
             open_student_window(mem_id) # call your student dashboard
         else:
             messagebox.showerror("Error", "Unknown role!")
