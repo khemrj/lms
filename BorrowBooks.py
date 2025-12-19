@@ -3,6 +3,10 @@ from tkinter import messagebox
 from tkinter import ttk
 import mysql.connector
 mem_id_global = None
+
+#------------show borrowed books-----------
+#def show_borrowed_books(mem_id):
+
 #--------back to login jane code---------
 def go_back():
     root.destroy()
@@ -146,7 +150,7 @@ def init_GUI():
  global root,book_table
  root = Tk()
  root.title("Library Management System - Student portal")
- root.geometry("700x500")
+ root.geometry("700x650")
  root.resizable(False, False)
 # ---------- HEADING ----------
  Label(root, text="Student Dashboard", font=("Arial", 18, "bold")).pack(pady=10)
@@ -188,10 +192,38 @@ def init_GUI():
     show="headings",
     height=8
  )
+ # ---------- BORROWED BOOKS TABLE ----------
+ Label(root, text="Borrowed Books", font=("Arial", 14, "bold")).pack(pady=(15, 5))
+
+ borrowed_frame = Frame(root)
+ borrowed_frame.pack()
+
+ borrowed_columns = ("ISBN", "Title", "Author", "Borrow Date", "Return Date")
+
+ borrowed_table = ttk.Treeview(
+    borrowed_frame,
+    columns=borrowed_columns,
+    show="headings",
+    height=6
+)
+
+ for col in borrowed_columns:
+    borrowed_table.heading(col, text=col)
+    borrowed_table.column(col, width=130)
+
+ borrowed_table.pack(side=LEFT)
+
+ borrowed_scroll = ttk.Scrollbar(
+    borrowed_frame,
+    orient=VERTICAL,
+    command=borrowed_table.yview
+)
+ borrowed_table.configure(yscrollcommand=borrowed_scroll.set)
+ borrowed_scroll.pack(side=RIGHT, fill=Y)
 # available books matra dekhauxa hola
  book_table.heading("ISBN", text="ISBN")
  book_table.heading("Title", text="Title")
- book_table.heading("Author", text="Author")
+ book_table.heading("Author", text="Author") 
  
  book_table.column("ISBN", width=120)
  book_table.column("Title", width=300)
@@ -204,7 +236,6 @@ def init_GUI():
  scrollbar.pack(side=RIGHT, fill=Y)
 
 # ---------- ADD BOOK SECTION ----------
-
 
  Button(
     root,

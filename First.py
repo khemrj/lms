@@ -4,7 +4,7 @@ import mysql.connector
 
 #--------------------database connection-------------
 
-def connect_db():
+def connect_db(): 
     return mysql.connector.connect(
         host="localhost",
         user="root",
