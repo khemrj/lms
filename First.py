@@ -37,7 +37,7 @@ lbl_username.grid(row=0, column=0, sticky="w", pady=10)
 
 entry_username = Entry(frame, width=30)
 entry_username.grid(row=0, column=1, pady=10)
-entry_username.insert(0,"9876765456")
+entry_username.insert(0,"roshanbhatta777755@gmail.com")
 
 
 # ------------------ Password ------------------
@@ -46,7 +46,7 @@ lbl_password.grid(row=1, column=0, sticky="w", pady=10)
 
 entry_password = Entry(frame, width=30, show="*")
 entry_password.grid(row=1, column=1, pady=10)
-entry_password.insert(0,"Sometimes@123")
+entry_password.insert(0,"Hello")
 
 # ------------------ Login Button Function ------------------
 def login():

@@ -49,6 +49,7 @@ def borrow_book():
     item_id = selected_item[0]
     book_data = book_table.item(item_id)["values"]
     isbn = book_data[0]  # first column is ISBN
+    book_name = book_data[1]
 
     # Insert into DB
     try:
@@ -58,17 +59,19 @@ def borrow_book():
         borrow_date = date.today()  # today's date
         print("before  insert query")
         query = """
-            INSERT INTO borrowdetail (mem_id, isbn, borrow_date)
+            INSERT INTO borrowdetail(mem_id, isbn, borrow_date)
             VALUES (%s, %s, %s)
         """
         
-        print("isbn is after query ",isbn)
+        print("isbn is ")
+        print(isbn)
         values = (mem_id_global, isbn, borrow_date)  # return_date is NULL initially
 
         cursor.execute(query, values)
+        print("isbn is after query ",isbn)
         conn.commit()
 
-        messagebox.showinfo("Success", f"Book {isbn} borrowed successfully!")
+        messagebox.showinfo("Success", f"Book {book_name} borrowed successfully!")
 
     except Exception as e:
         messagebox.showerror("Database Error", str(e))
