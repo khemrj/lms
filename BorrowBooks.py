@@ -3,6 +3,40 @@ from tkinter import messagebox
 from tkinter import ttk
 import mysql.connector
 mem_id_global = None
+#--------back to login jane code---------
+def go_back():
+    root.destroy()
+    import First
+    First.main() 
+
+def search_books(event=None):
+    keyword = search_entry.get().strip()
+
+    # Clear table
+    for row in book_table.get_children():
+        book_table.delete(row)
+
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+
+        query = """
+            SELECT isbn, title, author
+            FROM tbl_books
+            WHERE title LIKE %s
+        """
+        cursor.execute(query, (f"%{keyword}%",))
+        records = cursor.fetchall()
+
+        for row in records:
+            book_table.insert("", END, values=row)
+
+    except mysql.connector.Error as err:
+        messagebox.showerror("Database Error", str(err))
+
+    finally:
+        cursor.close()
+        conn.close()
 
 #------------if clicked in a particular field-------------
 def on_book_select(event):
@@ -114,9 +148,33 @@ def init_GUI():
  root.title("Library Management System - Student portal")
  root.geometry("700x500")
  root.resizable(False, False)
-
 # ---------- HEADING ----------
  Label(root, text="Student Dashboard", font=("Arial", 18, "bold")).pack(pady=10)
+
+ # ---------- SEARCH SECTION ----------
+ search_frame = Frame(root)
+ search_frame.pack(pady=5)
+
+ Label(search_frame, text="Search Book:", font=("Arial", 11)).pack(side=LEFT, padx=5)
+
+ global search_entry
+ search_entry = Entry(search_frame, width=30)
+ search_entry.pack(side=LEFT, padx=5)
+ search_entry.bind("<Return>", search_books)  # Enter key search
+
+ Button(
+     search_frame,
+     text="Search",
+     command=search_books,
+     width=10
+ ).pack(side=LEFT, padx=5)
+
+ Button(
+     search_frame,
+     text="Back",
+     command=go_back,
+     width=8
+ ).pack(side=LEFT, padx=10)
 
 # ---------- TABLE FRAME ----------
  global table_frame
@@ -125,11 +183,11 @@ def init_GUI():
  columns = ("ISBN", "Title", "Author")
 
  book_table = ttk.Treeview(
-     table_frame,
+  table_frame,
     columns=columns,
     show="headings",
     height=8
-)
+ )
 # available books matra dekhauxa hola
  book_table.heading("ISBN", text="ISBN")
  book_table.heading("Title", text="Title")
@@ -156,7 +214,7 @@ def init_GUI():
     fg="white",
     width=15,
     command=borrow_book
-).pack(pady=15)
+ ).pack(pady=15)
 
 # ---------- LOAD BOOKS AT START ----------
  load_books()

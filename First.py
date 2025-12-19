@@ -12,6 +12,8 @@ def connect_db():
         database="db_lms"
     )
 
+
+
 def open_admin_window(mem_id):
     import ManageBooks
     ManageBooks.start(mem_id)
@@ -19,6 +21,7 @@ def open_admin_window(mem_id):
 
 def open_student_window(mem_id):
     import BorrowBooks
+    print("inside open_student_window function")
     print("login ma memId is ",mem_id)
     BorrowBooks.start(mem_id)
 # ------------------ Main Window ------------------
@@ -30,6 +33,9 @@ root.resizable(False, False)
 # ------------------ Main Frame ------------------
 frame = Frame(root, padx=20, pady=20)
 frame.pack(expand=True)
+
+#------search book feature-------------
+ 
 
 # ------------------ Username ------------------
 lbl_username = Label(frame, text="Username:")
@@ -86,7 +92,7 @@ def login():
             open_admin_window(mem_id)   # call your admin dashboard
         elif role == "USR":
             print("User login")
-            print("memberis is ", mem_id)
+            print("memberis is  and opening open-student_window", mem_id)
             open_student_window(mem_id) # call your student dashboard
         else:
             messagebox.showerror("Error", "Unknown role!")
