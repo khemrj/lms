@@ -16,7 +16,7 @@ def connect_db():
 
 def open_admin_window(mem_id):
     import ManageBooks
-    ManageBooks.start(mem_id)
+    ManageBooks.init_gui()
     
 
 def open_student_window(mem_id):
@@ -43,16 +43,16 @@ lbl_username.grid(row=0, column=0, sticky="w", pady=10)
 
 entry_username = Entry(frame, width=30)
 entry_username.grid(row=0, column=1, pady=10)
-entry_username.insert(0,"roshanbhatta777755@gmail.com")
+entry_username.insert(0,"khemrajjoshijk@gmail.com")
 
 
 # ------------------ Password ------------------
 lbl_password = Label(frame, text="Password:")
 lbl_password.grid(row=1, column=0, sticky="w", pady=10)
-8
+
 entry_password = Entry(frame, width=30, show="*")
 entry_password.grid(row=1, column=1, pady=10)
-entry_password.insert(0,"Hello")
+entry_password.insert(0,"Sometimes@123")
 
 # ------------------ Login Button Function ------------------
 def login():

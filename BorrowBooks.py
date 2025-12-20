@@ -26,7 +26,7 @@ def show_borrowed_books(mem_id):
                 b.borrow_date
             FROM borrowdetail b
             JOIN tbl_books t ON b.isbn = t.isbn
-            WHERE b.mem_id = %s
+            WHERE b.mem_id = %s and b.return_date IS NULL
             ORDER BY b.borrow_date DESC
         """
 
@@ -146,11 +146,12 @@ def borrow_book():
         values = (mem_id_global, isbn, borrow_date)  # return_date is NULL initially
 
         cursor.execute(query, values)
+        show_borrowed_books(mem_id_global)
         print("isbn is after query ",isbn)
         conn.commit()
 
         messagebox.showinfo("Success", f"Book {book_name} borrowed successfully!")
-
+        
     except Exception as e:
         messagebox.showerror("Database Error", str(e))
 
@@ -284,7 +285,7 @@ def init_GUI():
     bg="green",
     fg="white",
     width=15,
-    command=borrow_book
+    command=borrow_book,
  ).pack(pady=15)
 
 # ---------- LOAD BOOKS AT START ----------
