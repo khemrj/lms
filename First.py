@@ -3,7 +3,6 @@ from tkinter import messagebox
 import mysql.connector
 
 #--------------------database connection-------------
-
 def connect_db(): 
     return mysql.connector.connect(
         host="localhost",
@@ -12,54 +11,69 @@ def connect_db():
         database="db_lms"
     )
 
-
-
 def open_admin_window(mem_id):
     import ManageBooks
     ManageBooks.init_gui()   
-    
 
 def open_student_window(mem_id):
     import BorrowBooks
     print("inside open_student_window function")
-    print("login ma memId is ",mem_id)
+    print("login ma memId is ", mem_id)
     BorrowBooks.start(mem_id)
+
 # ------------------ Main Window ------------------
 root = Tk()
 root.title("Library Management System")
-root.geometry("450x300")
+root.geometry("450x350")
 root.resizable(False, False)
+root.configure(bg="#f4f1ec")
+
+# ------------------ Header ------------------
+header = Label(
+    root,
+    text="Library Management System",
+    font=("Arial", 16, "bold"),
+    bg="#2c3e50",
+    fg="white",
+    pady=10
+)
+header.pack(fill=X)
 
 # ------------------ Main Frame ------------------
-frame = Frame(root, padx=20, pady=20)
+frame = Frame(root, bg="#f4f1ec", padx=30, pady=30)
 frame.pack(expand=True)
 
-#------search book feature-------------
- 
-
 # ------------------ Username ------------------
-lbl_username = Label(frame, text="Username:")
-lbl_username.grid(row=0, column=0, sticky="w", pady=10)
+lbl_username = Label(
+    frame,
+    text="Email:",
+    font=("Arial", 11),
+    bg="#f4f1ec"
+)
+lbl_username.grid(row=0, column=0, sticky="e", pady=10, padx=10)
 
 entry_username = Entry(frame, width=30)
 entry_username.grid(row=0, column=1, pady=10)
-entry_username.insert(0,"khemrajjoshijk@gmail.com")
-
+entry_username.insert(0, "khemrajjoshijk@gmail.com")
 
 # ------------------ Password ------------------
-lbl_password = Label(frame, text="Password:")
-lbl_password.grid(row=1, column=0, sticky="w", pady=10)
+lbl_password = Label(
+    frame,
+    text="Password:",
+    font=("Arial", 11),
+    bg="#f4f1ec"
+)
+lbl_password.grid(row=1, column=0, sticky="e", pady=10, padx=10)
 
 entry_password = Entry(frame, width=30, show="*")
 entry_password.grid(row=1, column=1, pady=10)
-entry_password.insert(0,"Sometimes@123")
+entry_password.insert(0, "Sometimes@123")
 
 # ------------------ Login Button Function ------------------
 def login():
     username = entry_username.get().strip()
     password = entry_password.get().strip()
 
-    # -------- Input Validation --------
     if not username:
         messagebox.showwarning("Input Error", "Please enter Email")
         entry_username.focus()
@@ -84,73 +98,56 @@ def login():
         mem_id, role = result
         messagebox.showinfo("Success", f"Login Successful ({role})")
 
-        root.destroy()   # close login window
+        root.destroy()
 
-        # -------- Role-based window --------
         if role == "ADM":
-            print("admin login")
-            open_admin_window(mem_id)   # call your admin dashboard
+            open_admin_window(mem_id)
         elif role == "USR":
-            print("User login")
-            print("memberis is  and opening open-student_window", mem_id)
-            open_student_window(mem_id) # call your student dashboard
+            open_student_window(mem_id)
         else:
             messagebox.showerror("Error", "Unknown role!")
-
     else:
         messagebox.showerror("Error", "Invalid credentials")
 
     cursor.close()
     conn.close()
 
-
 # ------------------ Signup Window Function ------------------
 def open_signup():
     root.withdraw()
     signup_window = Toplevel(root)
     signup_window.title("Signup - Library Management System")
-    signup_window.geometry("450x350")
+    signup_window.geometry("450x380")
     signup_window.resizable(False, False)
+    signup_window.configure(bg="#f4f1ec")
 
-    signup_frame = Frame(signup_window, padx=20, pady=20)
+    signup_frame = Frame(signup_window, bg="#f4f1ec", padx=30, pady=30)
     signup_frame.pack(expand=True)
 
-    # -------- Signup Username --------
-    lbl_su_username = Label(signup_frame, text="Full name:")
-    lbl_su_username.grid(row=0, column=0, sticky="w", pady=10)
+    Label(signup_frame, text="Create Account", font=("Arial", 14, "bold"),
+          bg="#f4f1ec").grid(row=0, column=0, columnspan=2, pady=10)
 
+    Label(signup_frame, text="Full Name:", bg="#f4f1ec").grid(row=1, column=0, sticky="e", pady=8)
     entry_su_username = Entry(signup_frame, width=30)
-    entry_su_username.grid(row=0, column=1, pady=10)
-    #entry_su_username.insert(0, "9876765456")
+    entry_su_username.grid(row=1, column=1, pady=8)
 
-    #-------------email -----------------------
-
-    lbl_su_email = Label(signup_frame, text="Email:")
-    lbl_su_email.grid(row=1, column=0, sticky="w", pady=10)
-
+    Label(signup_frame, text="Email:", bg="#f4f1ec").grid(row=2, column=0, sticky="e", pady=8)
     entry_su_email = Entry(signup_frame, width=30)
-    entry_su_email.grid(row=1, column=1, pady=10)
-    
-    # -------- Signup Password --------
-    lbl_su_password = Label(signup_frame, text="Password:")
-    lbl_su_password.grid(row=2, column=0, sticky="w", pady=10)
+    entry_su_email.grid(row=2, column=1, pady=8)
 
+    Label(signup_frame, text="Password:", bg="#f4f1ec").grid(row=3, column=0, sticky="e", pady=8)
     entry_su_password = Entry(signup_frame, width=30, show="*")
-    entry_su_password.grid(row=2, column=1, pady=10)
+    entry_su_password.grid(row=3, column=1, pady=8)
 
-    # -------- Confirm Password --------
-    lbl_confirm = Label(signup_frame, text="Confirm Password:")
-    lbl_confirm.grid(row=3, column=0, sticky="w", pady=10)
-
+    Label(signup_frame, text="Confirm Password:", bg="#f4f1ec").grid(row=4, column=0, sticky="e", pady=8)
     entry_confirm = Entry(signup_frame, width=30, show="*")
-    entry_confirm.grid(row=3, column=1, pady=10)
+    entry_confirm.grid(row=4, column=1, pady=8)
 
-    # -------- Signup Button Function --------
     def signup():
         su_username = entry_su_username.get()
         su_password = entry_su_password.get()
         confirm_password = entry_confirm.get()
-        email =entry_su_email.get()
+        email = entry_su_email.get()
 
         if not su_username or not su_password or not email or not confirm_password:
             messagebox.showerror("Error", "All fields are required")
@@ -159,51 +156,58 @@ def open_signup():
         if su_password != confirm_password:
             messagebox.showerror("Error", "Passwords do not match")
             return
-        
-    
+
         conn = connect_db()
         cursor = conn.cursor()
 
-        
-        print("before  insert query in signup")
         query = """
             INSERT INTO memberinfo (full_name, email, password)
             VALUES (%s, %s, %s)
         """
-        
-        print("isbn is after query ")
-        values = (su_username, email, su_password)  # return_date is NULL initially
-
+        values = (su_username, email, su_password)
         cursor.execute(query, values)
         conn.commit()
 
-        messagebox.showinfo("Success", f"User is registered ")
         cursor.close()
         conn.close()
-        
 
-
-
-
-        # ---- If signup is successful ----
         messagebox.showinfo(
             "Signup Successful",
             "Signup successful, Please login to continue"
         )
 
-        signup_window.destroy()   # Close signup window
+        signup_window.destroy()
         root.deiconify()
 
-    # -------- Signup Button --------
-    btn_signup = Button(signup_frame, text="Signup", width=15, command=signup)
-    btn_signup.grid(row=4, column=0, columnspan=2, pady=20)
+    Button(
+        signup_frame,
+        text="Signup",
+        width=18,
+        bg="#27ae60",
+        fg="white",
+        command=signup
+    ).grid(row=5, column=0, columnspan=2, pady=20)
 
 # ------------------ Buttons ------------------
-btn_login = Button(frame, text="Login", width=12, command=login)
-btn_login.grid(row=2, column=0, pady=20)
+btn_login = Button(
+    frame,
+    text="Login",
+    width=14,
+    bg="#2980b9",
+    fg="white",
+    command=login
+)
+btn_login.grid(row=2, column=0, pady=25)
 
-btn_signup = Button(frame, text="Signup", width=12, command=open_signup)
-btn_signup.grid(row=2, column=1, pady=20)
+btn_signup = Button(
+    frame,
+    text="Signup",
+    width=14,
+    bg="#8e44ad",
+    fg="white",
+    command=open_signup
+)
+btn_signup.grid(row=2, column=1, pady=25)
 
 # ------------------ Run Application ------------------
 root.mainloop()

@@ -65,9 +65,8 @@ def search_books(event=None):
         cursor = conn.cursor()
 
         query = """
-            SELECT isbn, title, author
-            FROM tbl_books
-            WHERE title LIKE %s
+            SELECT b.isbn, b.title, b.author FROM tbl_books b WHERE NOT EXISTS ( SELECT 1 FROM borrowdetail bd WHERE bd.isbn = b.isbn AND bd.return_date IS NULL)
+            and title LIKE %s
         """
         cursor.execute(query, (f"%{keyword}%",))
         records = cursor.fetchall()
@@ -108,10 +107,6 @@ def connect_db():
         database="db_lms"
     )
 
-
-
-
-
 # ------------ Borrow Book Function ---------
 from datetime import date
 from tkinter import messagebox
@@ -150,6 +145,7 @@ def borrow_book():
         print("isbn is after query ",isbn)
         conn.commit()
         show_borrowed_books(mem_id_global)
+        load_books()
         messagebox.showinfo("Success", f"Book {book_name} borrowed successfully!")
         
     except Exception as e:
@@ -169,7 +165,7 @@ def load_books():
     try:
         conn = connect_db()
         cursor = conn.cursor()
-        cursor.execute("SELECT isbn, title, author FROM tbl_books")
+        cursor.execute("SELECT b.isbn, b.title, b.author FROM tbl_books b WHERE NOT EXISTS ( SELECT 1 FROM borrowdetail bd WHERE bd.isbn = b.isbn AND bd.return_date IS NULL)")
         records = cursor.fetchall()
 
         for row in records:

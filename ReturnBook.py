@@ -98,7 +98,7 @@ def return_book():
         cursor.execute(query, (borrow_id,))
         conn.commit()
         search_student()
-        messagebox.showinfo("Success", "Book returned successfully now calling search_student")
+        messagebox.showinfo("Success", "Book returned successfully")
           # refresh table
 
     except Exception as e:
