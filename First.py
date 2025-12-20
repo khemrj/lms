@@ -16,7 +16,7 @@ def connect_db():
 
 def open_admin_window(mem_id):
     import ManageBooks
-    ManageBooks.init_gui()
+    ManageBooks.init_gui()   
     
 
 def open_student_window(mem_id):

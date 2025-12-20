@@ -5,6 +5,7 @@ import mysql.connector
 
 #-------------Return Book function-----------
 def return_book():
+    root.withdraw()
     import ReturnBook
 
 # ---------- DATABASE CONNECTION ----------
@@ -106,6 +107,7 @@ def add_book():
 
 # ---------- GUI WINDOW ----------
 def init_gui():
+ global root
  root = Tk()
  root.title("Library Management System - Librarian Panel")
  root.geometry("800x600")
@@ -152,6 +154,7 @@ def init_gui():
        ).pack(pady=10, padx=10, side=BOTTOM)
 
 # ---------- ADD BOOK FRAME ----------
+ global entry_isbn, entry_title, entry_author
  add_frame = LabelFrame(main_frame, text="Add New Book", padx=10, pady=10, font=("Arial", 12, "bold"))
  add_frame.pack(fill=BOTH, padx=10, pady=10)
 

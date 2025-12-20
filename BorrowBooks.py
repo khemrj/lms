@@ -146,10 +146,10 @@ def borrow_book():
         values = (mem_id_global, isbn, borrow_date)  # return_date is NULL initially
 
         cursor.execute(query, values)
-        show_borrowed_books(mem_id_global)
+       
         print("isbn is after query ",isbn)
         conn.commit()
-
+        show_borrowed_books(mem_id_global)
         messagebox.showinfo("Success", f"Book {book_name} borrowed successfully!")
         
     except Exception as e:

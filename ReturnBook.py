@@ -2,11 +2,10 @@ from tkinter import *
 from tkinter import ttk, messagebox
 import mysql.connector
 from datetime import date
-
+import ManageBooks
 #----------go back --------------
 def go_back_to_managebooks():
-    root.withdraw()          # close ReturnBook window
-    import ManageBooks
+    root.deiconify()          # close ReturnBook window
     ManageBooks.init_gui()
      # or pass mem_id if needed
 
@@ -98,9 +97,9 @@ def return_book():
 
         cursor.execute(query, (borrow_id,))
         conn.commit()
-
-        messagebox.showinfo("Success", "Book returned successfully")
-        search_student()  # refresh table
+        search_student()
+        messagebox.showinfo("Success", "Book returned successfully now calling search_student")
+          # refresh table
 
     except Exception as e:
         messagebox.showerror("Error", str(e))
