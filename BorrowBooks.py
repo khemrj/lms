@@ -67,10 +67,10 @@ def search_books(event=None):
         cursor = conn.cursor()
 
         query = """
-            SELECT b.isbn, b.title, b.author FROM tbl_books b WHERE NOT EXISTS ( SELECT 1 FROM borrowdetail bd WHERE bd.isbn = b.isbn AND bd.return_date IS NULL)
-            and title LIKE %s
+            SELECT b.isbn, b.title, b.author FROM tbl_books b WHERE b.title LIKE %s AND NOT EXISTS ( SELECT 1 FROM borrowdetail bd WHERE bd.isbn = b.isbn AND  bd.mem_id = %s ANd bd.return_date IS NULL)
+        
         """
-        cursor.execute(query, (f"%{keyword}%",))
+        cursor.execute(query, (f"%{keyword}%",mem_id_global))
         records = cursor.fetchall()
 
         for row in records:

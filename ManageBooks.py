@@ -74,7 +74,7 @@ def delete_book():
         load_books()
 
     except mysql.connector.Error as err:
-        messagebox.showerror("Cannnot delete book ; it is borrowed ", str(err))  # This means book is already borrowed by student
+        messagebox.showerror("Eooer", "The book has been borrowed cannot Delete")  # This means book is already borrowed by student
 
     finally:
         cursor.close()
