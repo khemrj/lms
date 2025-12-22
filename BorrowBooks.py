@@ -4,6 +4,13 @@ from tkinter import ttk
 import mysql.connector
 from datetime import date
 
+def logout():
+    confirm = messagebox.askyesno("Confirm Logout", "Are you sure you want to log out?")
+    if confirm:
+        root.destroy()
+        import First
+        First.main()
+
 # ---------- THEME COLORS ----------
 COLOR_BG = "#f0f2f5"
 COLOR_PRIMARY = "#2c3e50"
