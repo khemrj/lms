@@ -3,13 +3,52 @@ from tkinter import messagebox
 from tkinter import ttk
 import mysql.connector
 
+# ---------- THEME COLORS ----------
+COLOR_BG = "#f0f2f5"
+COLOR_PRIMARY = "#2c3e50"
+COLOR_ACCENT = "#3498db"
+COLOR_SUCCESS = "#27ae60"
+COLOR_DANGER = "#e74c3c"
+COLOR_WARNING = "#f39c12"
+
+# ---------- LOGOUT FUNCTION ----------
+def logout():
+    confirm = messagebox.askyesno("Confirm Logout", "Are you sure you want to log out?")
+    if confirm:
+        root.destroy()
+        import First
+        First.main()
+
+# ---------- SEARCH FUNCTION ----------
+def search_books():
+    query_str = entry_search.get().strip()
+    for row in book_table.get_children():
+        book_table.delete(row)
+    
+    try:
+        conn = connect_db()
+        cursor = conn.cursor()
+        sql = "SELECT isbn, title, author, quantity FROM tbl_books WHERE title LIKE %s OR author LIKE %s OR isbn LIKE %s"
+        val = (f"%{query_str}%", f"%{query_str}%", f"%{query_str}%")
+        cursor.execute(sql, val)
+        records = cursor.fetchall()
+        for row in records:
+            book_table.insert("", END, values=row)
+    except mysql.connector.Error as err:
+        messagebox.showerror("Database Error", str(err))
+    finally:
+        cursor.close()
+        conn.close()
+
 # ---------- Clear Entries Function ----------
 def clear_entries():
-    entry_isbn.config(state="normal")  # make editable when clearing
+    entry_isbn.config(state="normal")
     entry_isbn.delete(0, END)
     entry_title.delete(0, END)
     entry_author.delete(0, END)
     entry_quantity.delete(0, END)
+    # Note: We keep the search entry separate for better UX
+    load_books()
 
 # ---------- FILL ENTRIES WHEN A ROW IS CLICKED ----------
 def fill_entries(event):
@@ -18,7 +57,7 @@ def fill_entries(event):
         item = book_table.item(selected_item[0])
         values = item["values"]
         if values:
-            entry_isbn.config(state="normal")  # temporarily enable to set value
+            entry_isbn.config(state="normal")
             entry_isbn.delete(0, END)
             entry_isbn.insert(0, values[0])
             entry_isbn.config(state="readonly")
@@ -32,7 +71,7 @@ def fill_entries(event):
             entry_quantity.delete(0, END)
             entry_quantity.insert(0, values[3])
 
-#-------------Return Book function-----------
+# -------------Return Book function-----------
 def return_book():
     root.withdraw()
     import ReturnBook
@@ -45,110 +84,73 @@ def connect_db():
         password="Sometimes@123",
         database="db_lms"
     )
+
 #--------------Delete book function---------------
 def delete_book():
     selected_item = book_table.selection()
-
     if not selected_item:
         messagebox.showwarning("No Selection", "Please select a book to delete")
         return
-
-    confirm = messagebox.askyesno(
-        "Confirm Delete",
-        "Are you sure you want to delete the selected book?"
-    )
-
+    confirm = messagebox.askyesno("Confirm Delete", "Are you sure you want to delete the selected book?")
     if not confirm:
         return
-
     isbn = book_table.item(selected_item[0])["values"][0]
-
     try:
         conn = connect_db()
         cursor = conn.cursor()
-
         cursor.execute("DELETE FROM tbl_books WHERE isbn = %s", (isbn,))
         conn.commit()
-
         messagebox.showinfo("Success", "Book deleted successfully")
         load_books()
-
     except mysql.connector.Error as err:
-        messagebox.showerror("Eooer", "The book has been borrowed cannot Delete")  # This means book is already borrowed by student
-
+        messagebox.showerror("Error", "The book has been borrowed and cannot be deleted")
     finally:
         cursor.close()
         conn.close()
 
 # ---------- UPDATE BOOK FUNCTION ----------
 def update_book():
-    # Get selected book from table
     selected_items = book_table.selection()
     if not selected_items:
         messagebox.showwarning("No Selection", "Please select a book to update")
         return
 
-    selected_item = selected_items[0]
-    selected_values = book_table.item(selected_item)["values"]
-    isbn_original, title_original, author_original, quantity_original = selected_values
-
-    # Get current entry values
     isbn = entry_isbn.get().strip()
     title = entry_title.get().strip()
     author = entry_author.get().strip()
     quantity = entry_quantity.get().strip()
-    quantity = int(quantity)
 
-    # Check if any changes were made
-    if (isbn, title, author, quantity) == (isbn_original, title_original, author_original, quantity_original):
-        messagebox.showinfo("Info", "Please make changes before updating — Nothing to update")
-        return
-
-    # Check if all fields are filled
     if not (isbn and title and author and quantity):
         messagebox.showerror("Error", "All fields are required")
         return
 
-    # Update the book in database
     try:
         conn = connect_db()
         cursor = conn.cursor()
-        query = """
-            UPDATE tbl_books
-            SET title=%s, author=%s, quantity=%s
-            WHERE isbn=%s
-        """
-        cursor.execute(query, (title, author, quantity, isbn))
+        query = "UPDATE tbl_books SET title=%s, author=%s, quantity=%s WHERE isbn=%s"
+        cursor.execute(query, (title, author, int(quantity), isbn))
         conn.commit()
-
-        load_books()  # refresh table
+        load_books()
         messagebox.showinfo("Success", "Book updated successfully")
-
     except mysql.connector.Error as err:
         messagebox.showerror("Database Error", str(err))
-
     finally:
         cursor.close()
         conn.close()
-
 
 # ---------- LOAD BOOKS INTO TABLE ----------
 def load_books():
     for row in book_table.get_children():
         book_table.delete(row)
-
     try:
         conn = connect_db()
         cursor = conn.cursor()
         cursor.execute("SELECT isbn, title, author, quantity FROM tbl_books order by title")
         records = cursor.fetchall()
-
         for row in records:
             book_table.insert("", END, values=row)
-
     except mysql.connector.Error as err:
         messagebox.showerror("Database Error", str(err))
-
     finally:
         cursor.close()
         conn.close()
@@ -167,139 +169,122 @@ def add_book():
     try:
         conn = connect_db()
         cursor = conn.cursor()
-
-        query = "INSERT INTO tbl_books (isbn, title, author,quantity) VALUES (%s, %s, %s,%s)"
-        cursor.execute(query, (isbn, title, author,quantity))
+        query = "INSERT INTO tbl_books (isbn, title, author, quantity) VALUES (%s, %s, %s, %s)"
+        cursor.execute(query, (isbn, title, author, quantity))
         conn.commit()
-
         messagebox.showinfo("Success", "Book added successfully")
-
-        entry_isbn.delete(0, END)
-        entry_title.delete(0, END)
-        entry_author.delete(0, END)
-        entry_quantity.delete(0,END)
-
-        load_books()  # refresh table
-
+        clear_entries()
+        load_books()
     except mysql.connector.Error as err:
         messagebox.showerror("Database Error", str(err))
-
     finally:
         cursor.close()
         conn.close()
 
 # ---------- GUI WINDOW ----------
 def init_gui():
- global root
- root = Tk()
- root.title("Library Management System - Librarian Panel")
- root.geometry("800x600")
- root.resizable(False, False)
+    global root, book_table, entry_isbn, entry_title, entry_author, entry_quantity, entry_search
+    root = Tk()
+    root.title("Library Management System")
+    root.geometry("1000x700")
+    root.configure(bg=COLOR_BG)
 
-# ---------- HEADING ----------
- Label(root, text="Librarian Dashboard", font=("Arial", 18, "bold")).pack(pady=10)
+    style = ttk.Style()
+    style.theme_use("clam")
+    style.configure("Treeview", background="#ffffff", foreground="black", rowheight=28, fieldbackground="#ffffff", font=("Arial", 10))
+    style.configure("Treeview.Heading", font=("Arial", 10, "bold"), background="#e1e1e1")
+    style.map("Treeview", background=[('selected', COLOR_ACCENT)])
 
-# ---------- MAIN FRAME ----------
- main_frame = Frame(root)
- main_frame.pack(pady=10, fill=BOTH, expand=True)
+    # Header
+    header = Frame(root, bg=COLOR_PRIMARY, height=80)
+    header.pack(fill=X)
+    Label(header, text="LIBRARIAN DASHBOARD", font=("Helvetica", 20, "bold"), fg="white", bg=COLOR_PRIMARY).pack(pady=20)
 
-# ---------- BOOK TABLE FRAME ----------
- table_frame = LabelFrame(main_frame, text="All Books", padx=10, pady=10, font=("Arial", 12, "bold"))
- table_frame.pack(fill=BOTH, padx=10, pady=10)
+    # Left Side: Management Form
+    left_frame = Frame(root, bg=COLOR_BG, padx=20, pady=20)
+    left_frame.pack(side=LEFT, fill=Y)
 
- #table + scrollbar frame
- table_inner_frame = Frame(table_frame)
- table_inner_frame.pack(fill=BOTH, expand=True)
+    # --- UPDATED FORM AREA ---
+    form_frame = LabelFrame(left_frame, text=" Book Details ", font=("Arial", 12, "bold"), bg=COLOR_BG, padx=15, pady=10)
+    form_frame.pack(fill=X)
 
- columns = ("ISBN", "Title", "Author","Quantity")
- global book_table
- book_table = ttk.Treeview(
-    table_frame,
-    columns=columns,
-    show="headings",
-    height=8
-)
+    # Small Clear Button placed inside the form header area using a clever grid trick
+    Button(form_frame, text="Reset Form", font=("Arial", 8, "bold"), bg="#bdc3c7", fg="#2c3e50", 
+           command=clear_entries, cursor="hand2", bd=0, padx=5).grid(row=0, column=2, sticky=E)
 
- for col in columns:
-    book_table.heading(col, text=col)
-    book_table.column(col, width=200 if col != "ISBN" else 120)
+    Label(form_frame, text="ISBN:", font=("Arial", 10), bg=COLOR_BG).grid(row=1, column=0, sticky=W, pady=8)
+    entry_isbn = Entry(form_frame, width=25, font=("Arial", 10))
+    entry_isbn.grid(row=1, column=1, pady=8, padx=5)
+    
+    Label(form_frame, text="Book Title:", font=("Arial", 10), bg=COLOR_BG).grid(row=2, column=0, sticky=W, pady=8)
+    entry_title = Entry(form_frame, width=25, font=("Arial", 10))
+    entry_title.grid(row=2, column=1, pady=8, padx=5)
+    
+    Label(form_frame, text="Author:", font=("Arial", 10), bg=COLOR_BG).grid(row=3, column=0, sticky=W, pady=8)
+    entry_author = Entry(form_frame, width=25, font=("Arial", 10))
+    entry_author.grid(row=3, column=1, pady=8, padx=5)
+    
+    Label(form_frame, text="Quantity:", font=("Arial", 10), bg=COLOR_BG).grid(row=4, column=0, sticky=W, pady=8)
+    entry_quantity = Entry(form_frame, width=25, font=("Arial", 10))
+    entry_quantity.grid(row=4, column=1, pady=8, padx=5)
 
- book_table.pack(side=LEFT, fill=BOTH, expand=True)
+    # Actions Frame
+    actions_frame = Frame(left_frame, bg=COLOR_BG)
+    actions_frame.pack(pady=10, fill=X)
 
- scrollbar = ttk.Scrollbar(table_frame, orient=VERTICAL, command=book_table.yview)
- book_table.configure(yscroll=scrollbar.set)
- scrollbar.pack(side=RIGHT, fill=Y)
+    btn_config = {"font": ("Arial", 10, "bold"), "fg": "white", "width": 20, "pady": 8, "cursor": "hand2", "bd": 0}
+    
+    Button(actions_frame, text="ADD NEW BOOK", bg=COLOR_SUCCESS, command=add_book, **btn_config).pack(pady=5)
+    Button(actions_frame, text="UPDATE SELECTED", bg=COLOR_ACCENT, command=update_book, **btn_config).pack(pady=5)
+    Button(actions_frame, text="DELETE FROM RECORD", bg=COLOR_DANGER, command=delete_book, **btn_config).pack(pady=5)
+    
+    # Visual separator
+    Frame(actions_frame, height=2, bg="#dcdde1").pack(fill=X, pady=15)
+    
+    Button(actions_frame, text="RETURN BOOK PANEL", bg=COLOR_PRIMARY, command=return_book, **btn_config).pack(pady=5)
+    Button(actions_frame, text="LOG OUT", bg="#7f8c8d", command=logout, **btn_config).pack(pady=(20, 5))
 
- book_table.bind("<<TreeviewSelect>>", fill_entries)
+    # Right Side: Table View + Search
+    right_frame = Frame(root, bg=COLOR_BG, padx=20, pady=20)
+    right_frame.pack(side=RIGHT, fill=BOTH, expand=True)
 
-# ---------- RETURN BOOK BUTTON ----------
- Button(main_frame,
-       text="Return Book",
-       font=("Arial", 11, "bold"),
-       bg="green",
-       fg="white",
-       width=15,
-       command=return_book
-       ).pack(pady=10, padx=10, side=BOTTOM)
+    # Search Bar Section
+    search_frame = Frame(right_frame, bg=COLOR_BG)
+    search_frame.pack(fill=X, pady=(0, 15))
+    
+    Label(search_frame, text="Search Inventory:", font=("Arial", 10, "bold"), bg=COLOR_BG).pack(side=LEFT, padx=5)
+    entry_search = Entry(search_frame, font=("Arial", 11), width=35)
+    entry_search.pack(side=LEFT, padx=5, ipady=3)
+    
+    Button(search_frame, text="Search", bg=COLOR_ACCENT, fg="white", font=("Arial", 9, "bold"), 
+           command=search_books, width=10).pack(side=LEFT, padx=5)
+    Button(search_frame, text="Refresh", bg="#95a5a6", fg="white", font=("Arial", 9, "bold"), 
+           command=load_books, width=10).pack(side=LEFT)
 
-# ---------- ADD BOOK FRAME ----------
- global entry_isbn, entry_title, entry_author,entry_quantity
- add_frame = LabelFrame(main_frame, text="Add New Book", padx=10, pady=10, font=("Arial", 12, "bold"))
- add_frame.pack(fill=BOTH, padx=10, pady=10)
+    table_container = LabelFrame(right_frame, text=" Inventory Overview ", font=("Arial", 11, "bold"), bg=COLOR_BG)
+    table_container.pack(fill=BOTH, expand=True)
 
- Label(add_frame, text="ISBN:", font=("Arial", 11)).grid(row=0, column=0, padx=10, pady=5, sticky=W)
- entry_isbn = Entry(add_frame, width=30)
- entry_isbn.grid(row=0, column=1, pady=5)
+    columns = ("ISBN", "Title", "Author", "Qty")
+    book_table = ttk.Treeview(table_container, columns=columns, show="headings")
+    
+    for col in columns:
+        book_table.heading(col, text=col)
+    
+    book_table.column("ISBN", width=120, anchor=CENTER)
+    book_table.column("Title", width=250)
+    book_table.column("Author", width=150)
+    book_table.column("Qty", width=60, anchor=CENTER)
 
- Label(add_frame, text="Title:", font=("Arial", 11)).grid(row=1, column=0, padx=10, pady=5, sticky=W)
- entry_title = Entry(add_frame, width=30)
- entry_title.grid(row=1, column=1, pady=5)
+    scrollbar = ttk.Scrollbar(table_container, orient=VERTICAL, command=book_table.yview)
+    book_table.configure(yscroll=scrollbar.set)
+    
+    book_table.pack(side=LEFT, fill=BOTH, expand=True, padx=5, pady=5)
+    scrollbar.pack(side=RIGHT, fill=Y)
 
- Label(add_frame, text="Author:", font=("Arial", 11)).grid(row=2, column=0, padx=10, pady=5, sticky=W)
- entry_author = Entry(add_frame, width=30)
- entry_author.grid(row=2, column=1, pady=5)
+    book_table.bind("<<TreeviewSelect>>", fill_entries)
 
- Label(add_frame, text="Quantity:", font=("Arial", 11)).grid(row=3, column=0, padx=10, pady=5, sticky=W)
- entry_quantity = Entry(add_frame, width=30)
- entry_quantity.grid(row=3, column=1, pady=5)
+    load_books()
+    root.mainloop()
 
- btn_frame = Frame(add_frame)
- btn_frame.grid(row=4, column=0, columnspan=2, pady=15)
-
- Button(
-    btn_frame,
-    text="Add Book",
-    font=("Arial", 11, "bold"),
-    bg="green",
-    fg="white",
-    width=12,
-    command=add_book
-).pack(side=LEFT, padx=5)
-
- Button(
-    btn_frame,
-    text="Update",
-    font=("Arial", 11, "bold"),
-    bg="#1e90ff",
-    fg="white",
-    width=12,
-    command=update_book
-).pack(side=LEFT, padx=5)
-
- Button(
-    btn_frame,
-    text="Delete",
-    font=("Arial", 11, "bold"),
-    bg="red",
-    fg="white",
-    width=12,
-    command=delete_book
-).pack(side=LEFT, padx=5)
-
- Button(btn_frame, text="Clear Fields", font=("Arial", 11, "bold"), bg="orange", fg="white",
-       width=12, command=lambda: clear_entries()).pack(side=LEFT, padx=5)
-
-
-# ---------- LOAD BOOKS AT START ----------
- load_books()
- root.mainloop()
+if __name__ == "__main__":
+    init_gui()

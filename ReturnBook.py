@@ -2,13 +2,20 @@ from tkinter import *
 from tkinter import ttk, messagebox
 import mysql.connector
 from datetime import date
-import ManageBooks
+import ManageBooks 
+
+# ---------- THEME COLORS ----------
+COLOR_BG = "#f0f2f5"
+COLOR_PRIMARY = "#2c3e50"
+COLOR_ACCENT = "#3498db"
+COLOR_SUCCESS = "#27ae60"
+COLOR_DANGER = "#e74c3c"
+COLOR_WARNING = "#f39c12"
+
 #----------go back --------------
 def go_back_to_managebooks():
-    root.deiconify()          # close ReturnBook window
+    root.withdraw() 
     ManageBooks.init_gui()
-     # or pass mem_id if needed
-
 
 # ---------- DATABASE CONNECTION ----------
 def connect_db():
@@ -22,9 +29,8 @@ def connect_db():
 # ---------- SEARCH STUDENT ----------
 def search_student():
     name = entry_student.get().strip()
-
     if not name:
-        messagebox.showwarning("Input Error", "Enter student name")
+        messagebox.showwarning("Input Error", "Enter student name to search")
         return
 
     for row in borrowed_table.get_children():
@@ -33,7 +39,6 @@ def search_student():
     try:
         conn = connect_db()
         cursor = conn.cursor()
-
         query = """
             SELECT 
                 bd.borrow_id,
@@ -48,12 +53,11 @@ def search_student():
             WHERE m.full_name LIKE %s
               AND bd.return_date IS NULL
         """
-
         cursor.execute(query, (f"%{name}%",))
         records = cursor.fetchall()
 
         if not records:
-            messagebox.showinfo("No Records", "No borrowed books found")
+            messagebox.showinfo("No Records", "No borrowed books found for this student.")
             return
 
         for row in records:
@@ -61,24 +65,18 @@ def search_student():
 
     except Exception as e:
         messagebox.showerror("Error", str(e))
-
     finally:
         cursor.close()
         conn.close()
-8
+
 # ---------- RETURN BOOK ----------
 def return_book():
     selected = borrowed_table.selection()
-
     if not selected:
-        messagebox.showwarning("No selection", "Select a book to return")
+        messagebox.showwarning("No selection", "Select a book from the table to return")
         return
 
-    confirm = messagebox.askyesno(
-        "Confirm Return",
-        "Are you sure you want to return this book?"
-    )
-
+    confirm = messagebox.askyesno("Confirm Return", "Are you sure you want to mark this book as returned?")
     if not confirm:
         return
 
@@ -88,127 +86,90 @@ def return_book():
     try:
         conn = connect_db()
         cursor = conn.cursor()
-
-        query = """
-            UPDATE borrowdetail
-            SET return_date = CURDATE()
-            WHERE borrow_id = %s
-        """
-
+        query = "UPDATE borrowdetail SET return_date = CURDATE() WHERE borrow_id = %s"
         cursor.execute(query, (borrow_id,))
         conn.commit()
-        search_student()
+        
+        search_student() # Refresh table
         messagebox.showinfo("Success", "Book returned successfully")
-          # refresh table
 
     except Exception as e:
         messagebox.showerror("Error", str(e))
-
     finally:
         cursor.close()
         conn.close()
 
-
-# ---------- GUI ----------
+# ---------- GUI INITIALIZATION ----------
 root = Tk()
 root.title("Library Management System - Return Book")
-root.geometry("900x520")
-root.resizable(False, False)
+root.geometry("1000x650")
+root.configure(bg=COLOR_BG)
 
-# ---------- MAIN CONTAINER ----------
-main_frame = Frame(root, padx=20, pady=10)
-main_frame.pack(fill=BOTH, expand=True)
+# Styling Treeview
+style = ttk.Style()
+style.theme_use("clam")
+style.configure("Treeview", background="#ffffff", foreground="black", rowheight=30, fieldbackground="#ffffff", font=("Arial", 10))
+style.configure("Treeview.Heading", font=("Arial", 10, "bold"), background="#e1e1e1")
+style.map("Treeview", background=[('selected', COLOR_ACCENT)])
 
-Label(
-    main_frame,
-    text="Return Borrowed Books",
-    font=("Arial", 18, "bold")
-).pack(pady=10)
+# Header
+header = Frame(root, bg=COLOR_PRIMARY, height=70)
+header.pack(fill=X)
+Label(header, text="RETURN BOOK PANEL", font=("Helvetica", 18, "bold"), fg="white", bg=COLOR_PRIMARY).pack(pady=15)
 
-# ---------- SEARCH FRAME ----------
-search_frame = LabelFrame(
-    main_frame,
-    text="Search Student",
-    font=("Arial", 12, "bold"),
-    padx=10,
-    pady=10
-)
-search_frame.pack(fill=X, pady=10)
+# Main Container
+container = Frame(root, bg=COLOR_BG, padx=30, pady=20)
+container.pack(fill=BOTH, expand=True)
 
-Label(search_frame, text="Student Name:", font=("Arial", 11)).grid(row=0, column=0, padx=5, pady=5, sticky=W)
+# ---------- SEARCH SECTION ----------
+search_section = LabelFrame(container, text=" Identify Student ", font=("Arial", 11, "bold"), bg=COLOR_BG, padx=15, pady=15)
+search_section.pack(fill=X, pady=(0, 20))
 
-entry_student = Entry(search_frame, width=30)
-entry_student.grid(row=0, column=1, padx=5, pady=5)
+Label(search_section, text="Enter Student Name:", font=("Arial", 10), bg=COLOR_BG).pack(side=LEFT, padx=5)
+entry_student = Entry(search_section, font=("Arial", 11), width=40)
+entry_student.pack(side=LEFT, padx=10, ipady=3)
 
-Button(
-    search_frame,
-    text="Search",
-    width=12,
-    bg="green",
-    fg="white",
-    command=search_student
-).grid(row=0, column=2, padx=10)
+Button(search_section, text="Search Records", bg=COLOR_ACCENT, fg="white", font=("Arial", 10, "bold"), 
+       command=search_student, width=15, cursor="hand2").pack(side=LEFT, padx=5)
 
-# ---------- TABLE FRAME ----------
-table_frame = LabelFrame(
-    main_frame,
-    text="Borrowed Books",
-    font=("Arial", 12, "bold"),
-    padx=10,
-    pady=10
-)
-table_frame.pack(fill=BOTH, expand=True, pady=10)
+# ---------- TABLE SECTION ----------
+table_frame = Frame(container, bg=COLOR_BG)
+table_frame.pack(fill=BOTH, expand=True)
 
-columns = ("BORROW_ID", "Student", "ISBN", "Title", "Borrow Date", "Days Borrowed")
+columns = ("BORROW_ID", "Student Name", "ISBN", "Book Title", "Borrow Date", "Days Held")
+borrowed_table = ttk.Treeview(table_frame, columns=columns, show="headings")
 
-borrowed_table = ttk.Treeview(
-    table_frame,
-    columns=columns,
-    show="headings",
-    height=10
-)
-
+# Column Configurations
 borrowed_table.heading("BORROW_ID", text="ID")
-borrowed_table.column("BORROW_ID", width=0, stretch=False)
+borrowed_table.column("BORROW_ID", width=50, anchor=CENTER)
 
-for col, w in {
-    "Student":150,
-    "ISBN":120,
-    "Title":250,
-    "Borrow Date":120,
-    "Days Borrowed":120
-}.items():
+column_widths = {
+    "Student Name": 180,
+    "ISBN": 120,
+    "Book Title": 280,
+    "Borrow Date": 120,
+    "Days Held": 100
+}
+
+for col, width in column_widths.items():
     borrowed_table.heading(col, text=col)
-    borrowed_table.column(col, width=w)
+    borrowed_table.column(col, width=width, anchor=W if "Title" in col else CENTER)
 
-borrowed_table.pack(side=LEFT, fill=BOTH, expand=True)
-
+# Scrollbar
 scrollbar = ttk.Scrollbar(table_frame, orient=VERTICAL, command=borrowed_table.yview)
 borrowed_table.configure(yscrollcommand=scrollbar.set)
+
+borrowed_table.pack(side=LEFT, fill=BOTH, expand=True)
 scrollbar.pack(side=RIGHT, fill=Y)
 
 # ---------- ACTION BUTTONS ----------
-btn_frame = Frame(main_frame)
-btn_frame.pack(pady=15)
+footer_frame = Frame(container, bg=COLOR_BG)
+footer_frame.pack(fill=X, pady=20)
 
-Button(
-    btn_frame,
-    text="Return Book",
-    font=("Arial", 12, "bold"),
-    bg="red",
-    fg="white",
-    width=18,
-    command=return_book
-).grid(row=0, column=0, padx=10)
+btn_config = {"font": ("Arial", 11, "bold"), "fg": "white", "width": 20, "pady": 8, "cursor": "hand2"}
 
-Button(
-    btn_frame,
-    text="⬅ Back",
-    font=("Arial", 12, "bold"),
-    bg="gray",
-    fg="white",
-    width=18,
-    command=go_back_to_managebooks
-).grid(row=0, column=1, padx=10)
+# Back button on the left, Return button on the right for balanced UI
+Button(footer_frame, text="⬅ BACK TO DASHBOARD", bg="#7f8c8d", command=go_back_to_managebooks, **btn_config).pack(side=LEFT)
+Button(footer_frame, text="CONFIRM RETURN", bg=COLOR_DANGER, command=return_book, **btn_config).pack(side=RIGHT)
 
 root.mainloop()

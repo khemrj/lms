@@ -2,49 +2,53 @@ from tkinter import *
 from tkinter import messagebox
 from tkinter import ttk
 import mysql.connector
+from datetime import date
+
+# ---------- THEME COLORS ----------
+COLOR_BG = "#f0f2f5"
+COLOR_PRIMARY = "#2c3e50"
+COLOR_ACCENT = "#3498db"
+COLOR_SUCCESS = "#27ae60"
+COLOR_DANGER = "#e74c3c"
+COLOR_WARNING = "#f39c12"
+
 mem_id_global = None
 
-
+# ---------- DATABASE CONNECTION ----------
+def connect_db():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="Sometimes@123",
+        database="db_lms"
+    )
 
 #------------show borrowed books-----------
 def show_borrowed_books(mem_id):
-    """
-    Shows borrowed books for a member with additional info:
-    - Title
-    - Borrow Date
-    - Borrowed Days (difference between today and borrow date)
-    """
-    # Clear existing rows
     for row in borrowed_table.get_children():
         borrowed_table.delete(row)
 
     try:
         conn = connect_db()
         cursor = conn.cursor()
-
         query = """
-            SELECT 
-                t.title,
-                b.borrow_date
+            SELECT t.title, b.borrow_date
             FROM borrowdetail b
             JOIN tbl_books t ON b.isbn = t.isbn
             WHERE b.mem_id = %s and b.return_date IS NULL
             ORDER BY b.borrow_date DESC
         """
-
         cursor.execute(query, (mem_id,))
         records = cursor.fetchall()
-
         today = date.today()
 
         for row in records:
             title, borrow_date = row
-            borrowed_days = (today - borrow_date).days  # difference in days
+            borrowed_days = (today - borrow_date).days
             borrowed_table.insert("", END, values=(title, borrow_date, borrowed_days))
 
     except mysql.connector.Error as err:
         messagebox.showerror("Database Error", str(err))
-
     finally:
         cursor.close()
         conn.close()
@@ -57,237 +61,177 @@ def go_back():
 
 def search_books(event=None):
     keyword = search_entry.get().strip()
-
-    # Clear table
     for row in book_table.get_children():
         book_table.delete(row)
 
     try:
         conn = connect_db()
         cursor = conn.cursor()
-
         query = """
-            SELECT b.isbn, b.title, b.author FROM tbl_books b WHERE b.title LIKE %s AND NOT EXISTS ( SELECT 1 FROM borrowdetail bd WHERE bd.isbn = b.isbn AND  bd.mem_id = %s ANd bd.return_date IS NULL)
-        
+            SELECT b.isbn, b.title, b.author 
+            FROM tbl_books b 
+            WHERE b.title LIKE %s 
+            AND NOT EXISTS (
+                SELECT 1 FROM borrowdetail bd 
+                WHERE bd.isbn = b.isbn AND bd.mem_id = %s AND bd.return_date IS NULL
+            )
         """
-        cursor.execute(query, (f"%{keyword}%",mem_id_global))
+        cursor.execute(query, (f"%{keyword}%", mem_id_global))
         records = cursor.fetchall()
-
         for row in records:
             book_table.insert("", END, values=row)
-
     except mysql.connector.Error as err:
         messagebox.showerror("Database Error", str(err))
-
     finally:
         cursor.close()
         conn.close()
 
-#------------if clicked in a particular field-------------
-def on_book_select(event):
-    selected_item = book_table.selection()  # returns a tuple of selected item ids
-    if selected_item:
-        item_id = selected_item[0]  # get first selected item
-        book_data = book_table.item(item_id)  # dictionary with "values"
-        isbn, title, author = book_data["values"]
-        print("ISBN:", isbn)
-        print("Title:", title)
-        print("Author:", author)
-
 def start(mem_id):
-    global mem_id_global  # tell Python we mean the global variable
+    global mem_id_global
     mem_id_global = mem_id
-    print("member ID is now", mem_id_global)
     init_GUI()
 
-# ---------- DATABASE CONNECTION ----------
-def connect_db():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="Sometimes@123",
-        database="db_lms"
-    )
-
 # ------------ Borrow Book Function ---------
-from datetime import date
-from tkinter import messagebox
-
 def borrow_book():
-    print("member ID is ",mem_id_global)
-    # Get selected row
-    selected_item = book_table.selection()  # returns tuple of selected items
+    selected_item = book_table.selection()
     if not selected_item:
-        messagebox.showwarning("No selection", "Please select a book to borrow")
+        messagebox.showwarning("No selection", "Please select a book to borrow from the available list.")
         return
 
     item_id = selected_item[0]
     book_data = book_table.item(item_id)["values"]
-    isbn = book_data[0]  # first column is ISBN
+    isbn = book_data[0]
     book_name = book_data[1]
 
-    # Insert into DB
     try:
         conn = connect_db()
         cursor = conn.cursor()
-
-        borrow_date = date.today()  # today's date
-        print("before  insert query")
-        query = """
-            INSERT INTO borrowdetail(mem_id, isbn, borrow_date)
-            VALUES (%s, %s, %s)
-        """
-        
-        print("isbn is ")
-        print(isbn)
-        values = (mem_id_global, isbn, borrow_date)  # return_date is NULL initially
-
-        cursor.execute(query, values)
-       
-        print("isbn is after query ",isbn)
+        borrow_date = date.today()
+        query = "INSERT INTO borrowdetail(mem_id, isbn, borrow_date) VALUES (%s, %s, %s)"
+        cursor.execute(query, (mem_id_global, isbn, borrow_date))
         conn.commit()
+
         show_borrowed_books(mem_id_global)
         load_books()
-        messagebox.showinfo("Success", f"Book {book_name} borrowed successfully!")
+        messagebox.showinfo("Success", f"'{book_name}' has been added to your borrowed list!")
         
     except Exception as e:
         messagebox.showerror("Database Error", str(e))
-
     finally:
         cursor.close()
         conn.close()
 
-
-    
 # ---------- LOAD BOOKS INTO TABLE ----------
 def load_books():
     for row in book_table.get_children():
         book_table.delete(row)
-
     try:
         conn = connect_db()
         cursor = conn.cursor()
-        cursor.execute("SELECT b.isbn, b.title, b.author FROM tbl_books b WHERE NOT EXISTS ( SELECT 1 FROM borrowdetail bd WHERE bd.isbn = b.isbn AND bd.return_date IS NULL)")
+        cursor.execute("""
+            SELECT b.isbn, b.title, b.author 
+            FROM tbl_books b 
+            WHERE NOT EXISTS (
+                SELECT 1 FROM borrowdetail bd 
+                WHERE bd.isbn = b.isbn AND bd.return_date IS NULL
+            )
+        """)
         records = cursor.fetchall()
-
         for row in records:
             book_table.insert("", END, values=row)
-
     except mysql.connector.Error as err:
         messagebox.showerror("Database Error", str(err))
-
     finally:
         cursor.close()
         conn.close()
 
-# ---------- ADD BOOK FUNCTION ----------
-
-    
 # ---------- GUI WINDOW ----------
-
 def init_GUI():
- global root,book_table
- root = Tk()
- root.title("Library Management System - Student portal")
- root.geometry("700x650")
- root.resizable(False, False)
-# ---------- HEADING ----------
- Label(root, text="Student Dashboard", font=("Arial", 18, "bold")).pack(pady=10)
+    global root, book_table, borrowed_table, search_entry
+    root = Tk()
+    root.title("Library Management System - Student Portal")
+    root.geometry("1000x750")
+    root.configure(bg=COLOR_BG)
 
- # ---------- SEARCH SECTION ----------
- search_frame = Frame(root)
- search_frame.pack(pady=5)
+    # Styling
+    style = ttk.Style()
+    style.theme_use("clam")
+    style.configure("Treeview", background="#ffffff", foreground="black", rowheight=28, fieldbackground="#ffffff", font=("Arial", 10))
+    style.configure("Treeview.Heading", font=("Arial", 10, "bold"), background="#e1e1e1")
+    style.map("Treeview", background=[('selected', COLOR_ACCENT)])
 
- Label(search_frame, text="Search Book:", font=("Arial", 11)).pack(side=LEFT, padx=5)
+    # Header
+    header = Frame(root, bg=COLOR_PRIMARY, height=80)
+    header.pack(fill=X)
+    Label(header, text="STUDENT DASHBOARD", font=("Helvetica", 20, "bold"), fg="white", bg=COLOR_PRIMARY).pack(pady=20)
 
- global search_entry
- search_entry = Entry(search_frame, width=30)
- search_entry.pack(side=LEFT, padx=5)
- search_entry.bind("<Return>", search_books)  # Enter key search
+    # Main Content Area
+    main_container = Frame(root, bg=COLOR_BG, padx=20, pady=10)
+    main_container.pack(fill=BOTH, expand=True)
 
- Button(
-     search_frame,
-     text="Search",
-     command=search_books,
-     width=10
- ).pack(side=LEFT, padx=5)
+    # ---------- SEARCH & NAV SECTION ----------
+    nav_frame = Frame(main_container, bg=COLOR_BG)
+    nav_frame.pack(fill=X, pady=10)
 
- Button(
-     search_frame,
-     text="Back",
-     command=go_back,
-     width=8
- ).pack(side=LEFT, padx=10)
+    Label(nav_frame, text="Search Library:", font=("Arial", 11, "bold"), bg=COLOR_BG).pack(side=LEFT, padx=5)
+    search_entry = Entry(nav_frame, font=("Arial", 11), width=40)
+    search_entry.pack(side=LEFT, padx=5, ipady=3)
+    search_entry.bind("<Return>", search_books)
 
-# ---------- TABLE FRAME ----------
- global table_frame
- table_frame = Frame(root)
- table_frame.pack(pady=10)
- columns = ("ISBN", "Title", "Author")
+    Button(nav_frame, text="Search", bg=COLOR_ACCENT, fg="white", font=("Arial", 9, "bold"), 
+           command=search_books, width=12, cursor="hand2").pack(side=LEFT, padx=5)
+    
+    Button(nav_frame, text="Logout", bg=COLOR_DANGER, fg="white", font=("Arial", 9, "bold"), 
+           command=go_back, width=12, cursor="hand2").pack(side=RIGHT, padx=5)
 
- book_table = ttk.Treeview(
-  table_frame,
-    columns=columns,
-    show="headings",
-    height=8
- )
- # ---------- BORROWED BOOKS TABLE ----------
- Label(root, text="Borrowed Books", font=("Arial", 14, "bold")).pack(pady=(15, 5))
+    # ---------- AVAILABLE BOOKS TABLE ----------
+    available_label_frame = LabelFrame(main_container, text=" Available for Borrowing ", font=("Arial", 11, "bold"), bg=COLOR_BG, padx=10, pady=10)
+    available_label_frame.pack(fill=BOTH, expand=True, pady=10)
 
- borrowed_frame = Frame(root)
- borrowed_frame.pack()
+    columns = ("ISBN", "Title", "Author")
+    book_table = ttk.Treeview(available_label_frame, columns=columns, show="headings", height=8)
+    
+    book_table.heading("ISBN", text="ISBN")
+    book_table.heading("Title", text="Book Title")
+    book_table.heading("Author", text="Author")
+    
+    book_table.column("ISBN", width=120, anchor=CENTER)
+    book_table.column("Title", width=400)
+    book_table.column("Author", width=250)
 
- borrowed_columns = ("Book name", "Borrowed date", "Held for(days)")
- global borrowed_table
- borrowed_table = ttk.Treeview(
-    borrowed_frame,
-    columns=borrowed_columns,
-    show="headings",
-    height=6
-)
+    available_scroll = ttk.Scrollbar(available_label_frame, orient=VERTICAL, command=book_table.yview)
+    book_table.configure(yscrollcommand=available_scroll.set)
+    
+    book_table.pack(side=LEFT, fill=BOTH, expand=True)
+    available_scroll.pack(side=RIGHT, fill=Y)
 
- for col in borrowed_columns:
-    borrowed_table.heading(col, text=col)
-    borrowed_table.column(col, width=130)
+    # Borrow Button (Center)
+    Button(main_container, text="BORROW SELECTED BOOK", bg=COLOR_SUCCESS, fg="white", 
+           font=("Arial", 11, "bold"), width=30, pady=10, command=borrow_book, cursor="hand2").pack(pady=10)
 
- borrowed_table.pack(side=LEFT)
+    # ---------- BORROWED BOOKS TABLE ----------
+    borrowed_label_frame = LabelFrame(main_container, text=" My Borrowed Books ", font=("Arial", 11, "bold"), bg=COLOR_BG, padx=10, pady=10)
+    borrowed_label_frame.pack(fill=BOTH, expand=True, pady=10)
 
- borrowed_scroll = ttk.Scrollbar(
-    borrowed_frame,
-    orient=VERTICAL,
-    command=borrowed_table.yview
-)
- borrowed_table.configure(yscrollcommand=borrowed_scroll.set)
- borrowed_scroll.pack(side=RIGHT, fill=Y)
-# available books matra dekhauxa hola
- book_table.heading("ISBN", text="ISBN")
- book_table.heading("Title", text="Title")
- book_table.heading("Author", text="Author") 
- 
- book_table.column("ISBN", width=120)
- book_table.column("Title", width=300)
- book_table.column("Author", width=200)
- 
- book_table.pack(side=LEFT)
+    borrowed_columns = ("Book Name", "Borrowed Date", "Days Held")
+    borrowed_table = ttk.Treeview(borrowed_label_frame, columns=borrowed_columns, show="headings", height=6)
 
- scrollbar = ttk.Scrollbar(table_frame, orient=VERTICAL, command=book_table.yview)
- book_table.configure(yscroll=scrollbar.set)
- scrollbar.pack(side=RIGHT, fill=Y)
+    borrowed_table.heading("Book Name", text="Book Name")
+    borrowed_table.heading("Borrowed Date", text="Borrowed Date")
+    borrowed_table.heading("Days Held", text="Days Held")
 
-# ---------- ADD BOOK SECTION ----------
+    borrowed_table.column("Book Name", width=400)
+    borrowed_table.column("Borrowed Date", width=200, anchor=CENTER)
+    borrowed_table.column("Days Held", width=150, anchor=CENTER)
 
- Button(
-    root,
-    text="Borrow Book",
-    font=("Arial", 11, "bold"),
-    bg="green",
-    fg="white",
-    width=15,
-    command=borrow_book,
- ).pack(pady=15)
+    borrowed_scroll = ttk.Scrollbar(borrowed_label_frame, orient=VERTICAL, command=borrowed_table.yview)
+    borrowed_table.configure(yscrollcommand=borrowed_scroll.set)
+    
+    borrowed_table.pack(side=LEFT, fill=BOTH, expand=True)
+    borrowed_scroll.pack(side=RIGHT, fill=Y)
 
-# ---------- LOAD BOOKS AT START ----------
- load_books()
- show_borrowed_books(mem_id_global)
- book_table.bind("<ButtonRelease-1>", on_book_select)
- root.mainloop()
+    # ---------- INITIAL LOAD ----------
+    load_books()
+    show_borrowed_books(mem_id_global)
+    
+    root.mainloop()
