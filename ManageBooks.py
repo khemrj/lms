@@ -47,7 +47,12 @@ def clear_entries():
     entry_title.delete(0, END)
     entry_author.delete(0, END)
     entry_quantity.delete(0, END)
-    # Note: We keep the search entry separate for better UX
+    
+    lbl_err_isbn.config(text="")
+    lbl_err_title.config(text="")
+    lbl_err_author.config(text="")
+    lbl_err_qty.config(text="")
+    
     load_books()
 
 # ---------- FILL ENTRIES WHEN A ROW IS CLICKED ----------
@@ -70,11 +75,17 @@ def fill_entries(event):
 
             entry_quantity.delete(0, END)
             entry_quantity.insert(0, values[3])
+            
+            lbl_err_isbn.config(text="")
+            lbl_err_title.config(text="")
+            lbl_err_author.config(text="")
+            lbl_err_qty.config(text="")
 
 # -------------Return Book function-----------
 def return_book():
-    root.withdraw()
+    root.destroy()
     import ReturnBook
+    ReturnBook.init_gui()
 
 # ---------- DATABASE CONNECTION ----------
 def connect_db():
@@ -157,14 +168,31 @@ def load_books():
 
 # ---------- ADD BOOK FUNCTION ----------
 def add_book():
-    isbn = entry_isbn.get()
-    title = entry_title.get()
-    author = entry_author.get()
-    quantity = entry_quantity.get()
+    isbn = entry_isbn.get().strip()
+    title = entry_title.get().strip()
+    author = entry_author.get().strip()
+    quantity = entry_quantity.get().strip()
 
-    if isbn == "" or title == "" or author == "":
-        messagebox.showerror("Error", "All fields are required")
-        return
+    lbl_err_isbn.config(text="")
+    lbl_err_title.config(text="")
+    lbl_err_author.config(text="")
+    lbl_err_qty.config(text="")
+
+    is_valid = True
+    if not isbn:
+        lbl_err_isbn.config(text="* Required")
+        is_valid = False
+    if not title:
+        lbl_err_title.config(text="* Required")
+        is_valid = False
+    if not author:
+        lbl_err_author.config(text="* Required")
+        is_valid = False
+    if not quantity:
+        lbl_err_qty.config(text="* Required")
+        is_valid = False
+
+    if not is_valid: return
 
     try:
         conn = connect_db()
@@ -184,105 +212,91 @@ def add_book():
 # ---------- GUI WINDOW ----------
 def init_gui():
     global root, book_table, entry_isbn, entry_title, entry_author, entry_quantity, entry_search
+    global lbl_err_isbn, lbl_err_title, lbl_err_author, lbl_err_qty
+
     root = Tk()
     root.title("Library Management System")
-    root.geometry("1000x700")
+    root.geometry("1100x780") # Increased height slightly for better fit
     root.configure(bg=COLOR_BG)
 
     style = ttk.Style()
     style.theme_use("clam")
     style.configure("Treeview", background="#ffffff", foreground="black", rowheight=28, fieldbackground="#ffffff", font=("Arial", 10))
     style.configure("Treeview.Heading", font=("Arial", 10, "bold"), background="#e1e1e1")
-    style.map("Treeview", background=[('selected', COLOR_ACCENT)])
 
-    # Header
-    header = Frame(root, bg=COLOR_PRIMARY, height=80)
+    header = Frame(root, bg=COLOR_PRIMARY, height=70)
     header.pack(fill=X)
-    Label(header, text="LIBRARIAN DASHBOARD", font=("Helvetica", 20, "bold"), fg="white", bg=COLOR_PRIMARY).pack(pady=20)
+    Label(header, text="LIBRARIAN DASHBOARD", font=("Helvetica", 18, "bold"), fg="white", bg=COLOR_PRIMARY).pack(pady=15)
 
-    # Left Side: Management Form
-    left_frame = Frame(root, bg=COLOR_BG, padx=20, pady=20)
+    left_frame = Frame(root, bg=COLOR_BG, padx=20, pady=10)
     left_frame.pack(side=LEFT, fill=Y)
 
-    # --- UPDATED FORM AREA ---
-    form_frame = LabelFrame(left_frame, text=" Book Details ", font=("Arial", 12, "bold"), bg=COLOR_BG, padx=15, pady=10)
+    form_frame = LabelFrame(left_frame, text=" Book Details ", font=("Arial", 11, "bold"), bg=COLOR_BG, padx=15, pady=5)
     form_frame.pack(fill=X)
 
-    # Small Clear Button placed inside the form header area using a clever grid trick
-    Button(form_frame, text="Reset Form", font=("Arial", 8, "bold"), bg="#bdc3c7", fg="#2c3e50", 
-           command=clear_entries, cursor="hand2", bd=0, padx=5).grid(row=0, column=2, sticky=E)
+    # Mini Reset Button
+    Button(form_frame, text="Reset", font=("Arial", 8), bg="#bdc3c7", fg="#2c3e50", 
+           command=clear_entries, cursor="hand2", bd=0).grid(row=0, column=1, sticky=E)
 
-    Label(form_frame, text="ISBN:", font=("Arial", 10), bg=COLOR_BG).grid(row=1, column=0, sticky=W, pady=8)
-    entry_isbn = Entry(form_frame, width=25, font=("Arial", 10))
-    entry_isbn.grid(row=1, column=1, pady=8, padx=5)
-    
-    Label(form_frame, text="Book Title:", font=("Arial", 10), bg=COLOR_BG).grid(row=2, column=0, sticky=W, pady=8)
-    entry_title = Entry(form_frame, width=25, font=("Arial", 10))
-    entry_title.grid(row=2, column=1, pady=8, padx=5)
-    
-    Label(form_frame, text="Author:", font=("Arial", 10), bg=COLOR_BG).grid(row=3, column=0, sticky=W, pady=8)
-    entry_author = Entry(form_frame, width=25, font=("Arial", 10))
-    entry_author.grid(row=3, column=1, pady=8, padx=5)
-    
-    Label(form_frame, text="Quantity:", font=("Arial", 10), bg=COLOR_BG).grid(row=4, column=0, sticky=W, pady=8)
-    entry_quantity = Entry(form_frame, width=25, font=("Arial", 10))
-    entry_quantity.grid(row=4, column=1, pady=8, padx=5)
+    # --- COMPACT GRID ---
+    def add_compact_field(label_text, row_idx):
+        Label(form_frame, text=label_text, font=("Arial", 9), bg=COLOR_BG).grid(row=row_idx, column=0, sticky=W, pady=(2,0))
+        entry = Entry(form_frame, width=28, font=("Arial", 10))
+        entry.grid(row=row_idx+1, column=0, columnspan=2, sticky=W)
+        err_lbl = Label(form_frame, text="", font=("Arial", 7), fg=COLOR_DANGER, bg=COLOR_BG)
+        err_lbl.grid(row=row_idx+2, column=0, sticky=W)
+        return entry, err_lbl
+
+    entry_isbn, lbl_err_isbn = add_compact_field("ISBN:", 1)
+    entry_title, lbl_err_title = add_compact_field("Book Title:", 4)
+    entry_author, lbl_err_author = add_compact_field("Author:", 7)
+    entry_quantity, lbl_err_qty = add_compact_field("Quantity:", 10)
 
     # Actions Frame
     actions_frame = Frame(left_frame, bg=COLOR_BG)
-    actions_frame.pack(pady=10, fill=X)
+    actions_frame.pack(pady=5, fill=X)
 
-    btn_config = {"font": ("Arial", 10, "bold"), "fg": "white", "width": 20, "pady": 8, "cursor": "hand2", "bd": 0}
+    btn_config = {"font": ("Arial", 9, "bold"), "fg": "white", "width": 22, "pady": 6, "cursor": "hand2", "bd": 0}
     
-    Button(actions_frame, text="ADD NEW BOOK", bg=COLOR_SUCCESS, command=add_book, **btn_config).pack(pady=5)
-    Button(actions_frame, text="UPDATE SELECTED", bg=COLOR_ACCENT, command=update_book, **btn_config).pack(pady=5)
-    Button(actions_frame, text="DELETE FROM RECORD", bg=COLOR_DANGER, command=delete_book, **btn_config).pack(pady=5)
+    Button(actions_frame, text="ADD NEW BOOK", bg=COLOR_SUCCESS, command=add_book, **btn_config).pack(pady=3)
+    Button(actions_frame, text="UPDATE SELECTED", bg=COLOR_ACCENT, command=update_book, **btn_config).pack(pady=3)
+    Button(actions_frame, text="DELETE FROM RECORD", bg=COLOR_DANGER, command=delete_book, **btn_config).pack(pady=3)
     
-    # Visual separator
-    Frame(actions_frame, height=2, bg="#dcdde1").pack(fill=X, pady=15)
+    Frame(actions_frame, height=1, bg="#dcdde1").pack(fill=X, pady=10)
     
-    Button(actions_frame, text="RETURN BOOK PANEL", bg=COLOR_PRIMARY, command=return_book, **btn_config).pack(pady=5)
-    Button(actions_frame, text="LOG OUT", bg="#7f8c8d", command=logout, **btn_config).pack(pady=(20, 5))
+    Button(actions_frame, text="RETURN BOOK PANEL", bg=COLOR_PRIMARY, command=return_book, **btn_config).pack(pady=3)
+    Button(actions_frame, text="LOG OUT", bg="#7f8c8d", command=logout, **btn_config).pack(pady=(15, 0))
 
-    # Right Side: Table View + Search
+    # Right Side
     right_frame = Frame(root, bg=COLOR_BG, padx=20, pady=20)
     right_frame.pack(side=RIGHT, fill=BOTH, expand=True)
 
-    # Search Bar Section
     search_frame = Frame(right_frame, bg=COLOR_BG)
-    search_frame.pack(fill=X, pady=(0, 15))
-    
-    Label(search_frame, text="Search Inventory:", font=("Arial", 10, "bold"), bg=COLOR_BG).pack(side=LEFT, padx=5)
-    entry_search = Entry(search_frame, font=("Arial", 11), width=35)
-    entry_search.pack(side=LEFT, padx=5, ipady=3)
-    
-    Button(search_frame, text="Search", bg=COLOR_ACCENT, fg="white", font=("Arial", 9, "bold"), 
-           command=search_books, width=10).pack(side=LEFT, padx=5)
-    Button(search_frame, text="Refresh", bg="#95a5a6", fg="white", font=("Arial", 9, "bold"), 
-           command=load_books, width=10).pack(side=LEFT)
+    search_frame.pack(fill=X, pady=(0, 10))
+    Label(search_frame, text="Search:", font=("Arial", 9, "bold"), bg=COLOR_BG).pack(side=LEFT, padx=5)
+    entry_search = Entry(search_frame, font=("Arial", 10), width=30)
+    entry_search.pack(side=LEFT, padx=5)
+    Button(search_frame, text="Search", bg=COLOR_ACCENT, fg="white", font=("Arial", 8, "bold"), command=search_books, width=8).pack(side=LEFT, padx=2)
+    Button(search_frame, text="Refresh", bg="#95a5a6", fg="white", font=("Arial", 8, "bold"), command=load_books, width=8).pack(side=LEFT)
 
     table_container = LabelFrame(right_frame, text=" Inventory Overview ", font=("Arial", 11, "bold"), bg=COLOR_BG)
     table_container.pack(fill=BOTH, expand=True)
 
     columns = ("ISBN", "Title", "Author", "Qty")
     book_table = ttk.Treeview(table_container, columns=columns, show="headings")
+    for col in columns: book_table.heading(col, text=col)
     
-    for col in columns:
-        book_table.heading(col, text=col)
-    
-    book_table.column("ISBN", width=120, anchor=CENTER)
-    book_table.column("Title", width=250)
-    book_table.column("Author", width=150)
-    book_table.column("Qty", width=60, anchor=CENTER)
+    book_table.column("ISBN", width=100, anchor=CENTER)
+    book_table.column("Title", width=220)
+    book_table.column("Author", width=130)
+    book_table.column("Qty", width=50, anchor=CENTER)
 
     scrollbar = ttk.Scrollbar(table_container, orient=VERTICAL, command=book_table.yview)
     book_table.configure(yscroll=scrollbar.set)
-    
     book_table.pack(side=LEFT, fill=BOTH, expand=True, padx=5, pady=5)
     scrollbar.pack(side=RIGHT, fill=Y)
 
     book_table.bind("<<TreeviewSelect>>", fill_entries)
-
     load_books()
     root.mainloop()
 
